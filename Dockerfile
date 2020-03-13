@@ -8,8 +8,17 @@
 FROM divio/base:4.15-py3.6-slim-stretch
 # </DOCKER_FROM>
 
-# <NPM>
-# </NPM>
+# <NODE>
+ADD build /stack/boilerplate
+
+ENV NODE_VERSION=10.16.3 \
+    NPM_VERSION=6.9.0
+
+RUN bash /stack/boilerplate/install.sh
+
+ENV NODE_PATH=$NVM_DIR/versions/node/v$NODE_VERSION/lib/node_modules \
+    PATH=$NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
+# </NODE>
 
 # <BOWER>
 # </BOWER>
@@ -26,11 +35,21 @@ RUN pip-reqs compile && \
         --requirement requirements.urls
 # </PYTHON>
 
+# <NPM>
+# package.json is put into / so that mounting /app for local
+# development does not require re-running npm install
+ENV PATH=/node_modules/.bin:$PATH
+COPY package.json /
+RUN (cd / && npm install --production && rm -rf /tmp/*)
+# </NPM>
+
 # <SOURCE>
 COPY . /app
 # </SOURCE>
 
 # <GULP>
+ENV GULP_MODE=production
+RUN gulp build
 # </GULP>
 
 # <STATIC>
